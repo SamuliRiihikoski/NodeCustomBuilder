@@ -160,9 +160,11 @@ def write(dict, nodes):
                     find_name = input.links[0].from_node
                     for find_from in all_nodes:
                         if find_name == find_from:
+                            temp_socket = str(input.links[0].from_socket.path_from_id()).split('outputs[')[-1]
+                            temp_socket = temp_socket.split(']')[0]
                             dict['links'].append({
                                 'output_node': input.links[0].from_node.name,
-                                'output_socket': input.links[0].from_socket.name,
+                                'output_socket': int(temp_socket),
                                 'input_node': select_node.name,
                                 'input_socket': index,
                                 'main_socket_type': ""
