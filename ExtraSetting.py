@@ -127,7 +127,7 @@ def writeExtraSettings(dict, node, type, nimi, main_mode):
 
     elif node.type == 'WIREFRAME':
 
-        settings.append([0, 'pixel_size', node.pizel_size])
+        settings.append([0, 'use_pixel_size', node.use_pizel_size])
         settings.append([1, 'Size', node.inputs['Size'].default_value])
 
 
