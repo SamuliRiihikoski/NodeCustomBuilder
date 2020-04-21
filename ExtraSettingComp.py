@@ -329,16 +329,16 @@ def writeExtraSettings(dict, node, type, nimi, main_mode):
         curve_3 = []
 
         for point in node.mapping.curves[0].points:
-            curve_0.append([point.location[0], point.location[1]])
+            curve_0.append([point.location[0], point.location[1], point.handle_type])
 
         for point in node.mapping.curves[1].points:
-            curve_1.append([point.location[0], point.location[1]])
+            curve_1.append([point.location[0], point.location[1], point.handle_type])
 
         for point in node.mapping.curves[2].points:
-            curve_2.append([point.location[0], point.location[1]])
+            curve_2.append([point.location[0], point.location[1], point.handle_type])
 
         for point in node.mapping.curves[3].points:
-            curve_3.append([point.location[0], point.location[1]])
+            curve_3.append([point.location[0], point.location[1], point.handle_type])
 
         settings.append([9, 0, curve_0])
         settings.append([9, 1, curve_1])
@@ -792,13 +792,13 @@ def writeExtraSettings(dict, node, type, nimi, main_mode):
         curve_2 = []
 
         for point in node.mapping.curves[0].points:
-            curve_0.append([point.location[0], point.location[1]])
+            curve_0.append([point.location[0], point.location[1], point.handle_type])
 
         for point in node.mapping.curves[1].points:
-            curve_1.append([point.location[0], point.location[1]])
+            curve_1.append([point.location[0], point.location[1], point.handle_type])
 
         for point in node.mapping.curves[2].points:
-            curve_2.append([point.location[0], point.location[1]])
+            curve_2.append([point.location[0], point.location[1], point.handle_type])
 
         settings.append([9, 0, curve_0])
         settings.append([9, 1, curve_1])
@@ -1294,7 +1294,8 @@ def readExtraSettings(extra_settings, node):
                         curve.points.remove(curve.points[0])
 
                 for index, loc in enumerate(setting[2]):
-                    curve.points[index].location = loc
+                    curve.points[index].location = (loc[0], loc[1])
+                    curve.points[index].handle_type = loc[2]
 
             else:
                 if (len(data) > 8):
@@ -1306,6 +1307,7 @@ def readExtraSettings(extra_settings, node):
 
                 for index, loc in enumerate(setting[2]):
                     curve.points[index].location = loc
+                    curve.points[index].handle_type = loc[2]
 
 
 
