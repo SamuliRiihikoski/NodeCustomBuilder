@@ -185,8 +185,10 @@ def write_groupnodetrees(allgroups):
                                 if(input.is_linked):
 
                                     nimi = input.links[0].from_node.name
+                                    from_socket_index = input.links[0].from_socket.path_from_id()
+                                    from_socket_index = from_socket_index.split(']')[-2].lstrip('.outputs[')
 
-                                    links['links'].append([nimi, input.links[0].from_socket.name, node.name, index])
+                                    links['links'].append([nimi, input.links[0].from_socket.name, node.name, index, int(from_socket_index)])
 
 
                 dict_groups['groups'].append ({

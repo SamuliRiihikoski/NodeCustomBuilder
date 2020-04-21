@@ -299,7 +299,12 @@ def read(filename):
         for link in group['links']:
 
             try:
-                group_tree.links.new(group_tree.nodes[link[0]].outputs[link[1]], group_tree.nodes[link[2]].inputs[link[3]])
+                from_index = link[4]
+            except:
+                from_index = link[1]
+
+            try:
+                group_tree.links.new(group_tree.nodes[link[0]].outputs[from_index], group_tree.nodes[link[2]].inputs[link[3]])
             except:
                 pass
 
