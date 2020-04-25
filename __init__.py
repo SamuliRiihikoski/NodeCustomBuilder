@@ -39,10 +39,28 @@ from bpy.types import Panel, UIList
 from . import write_json
 from . import read_json
 
+class NodeCustomBuilderPreferences(bpy.types.AddonPreferences):
+    bl_idname = __package__
 
-def get_items(self, context):
+    user_lib_path: StringProperty(name="Library Path",
+                                  default=os.path.join(os.path.dirname(__file__), "libraries"),
+                                  subtype='DIR_PATH')
+
+    def draw(self, context):
+        layout = self.layout
+
+        row = layout.row()
+        row.prop(self, "user_lib_path", expand=True)
+
+def get_library_path():
     library_dir = os.path.expanduser("~")
     library_dir = os.path.join(library_dir, "Documents", "NodeCustomBuilder")
+    library_dir = bpy.context.preferences.addons["NodeCustomBuilder"].preferences.user_lib_path
+    return library_dir
+
+
+def get_items(self, context):
+    library_dir = get_library_path() 
     folder_file = library_dir + os.sep + 'folders.txt'
     l = [];
 
@@ -90,8 +108,7 @@ class DeleteFolder(bpy.types.Operator):
             elif (bpy.context.space_data.shader_type == 'WORLD'):
                 type_mode = 'WL'
 
-        library_dir = os.path.expanduser("~")
-        library_dir = os.path.join(library_dir, "Documents", "NodeCustomBuilder")
+        library_dir = get_library_path() 
         folder_file = library_dir + os.sep + 'folders.txt'
 
         if(bpy.context.scene.custom_folders == 'Default'):
@@ -150,8 +167,7 @@ class DeleteSelected(bpy.types.Operator):
 
     def execute(self, context):
         scn = context.scene
-        library_dir = os.path.expanduser("~")
-        library_dir = os.path.join(library_dir, "Documents", "NodeCustomBuilder")
+        library_dir = get_library_path() 
 
         if (bpy.context.area.ui_type == 'CompositorNodeTree'):
 
@@ -214,8 +230,7 @@ class BlendSelectOperator(bpy.types.Operator):
 
         scn = context.scene
         if(scn != None):
-            library_dir = os.path.expanduser("~")
-            library_dir = os.path.join(library_dir, "Documents", "NodeCustomBuilder")
+            library_dir = get_library_path() 
 
             if(os.path.isdir(library_dir)):
 
@@ -285,8 +300,7 @@ class BlendSelectButtonOperator(bpy.types.Operator):
                 type = 'WL__'
                 type_mode = 'WL'
 
-        library_dir = os.path.expanduser("~")
-        library_dir = os.path.join(library_dir, "Documents", "NodeCustomBuilder")
+        library_dir = get_library_path() 
         folder_file = library_dir + os.sep + 'folders.txt'
         folder_index = []
 
@@ -352,8 +366,7 @@ class LIBRARY_MT_node(bpy.types.Menu):
     def draw(self, context):
         active_node = bpy.context.active_object.active_material.node_tree.nodes.active
 
-        library_dir = os.path.expanduser("~")
-        library_dir = os.path.join(library_dir, "Documents", "NodeCustomBuilder")
+        library_dir = get_library_path() 
 
         for index, file in enumerate(os.listdir(library_dir)):
 
@@ -399,8 +412,7 @@ class CUSTOM_OT_actions(bpy.types.Operator):
 
         elif self.action == 'REMOVE':
             scn = context.scene
-            library_dir = os.path.expanduser("~")
-            library_dir = os.path.join(library_dir, "Documents", "NodeCustomBuilder")
+            library_dir = get_library_path() 
 
             if (bpy.context.area.ui_type == 'CompositorNodeTree'):
 
@@ -467,8 +479,7 @@ class CUSTOM_OT_actions(bpy.types.Operator):
                     type = 'WL__'
                     type_mode = 'WL'
 
-            library_dir = os.path.expanduser("~")
-            library_dir = os.path.join(library_dir, "Documents", "NodeCustomBuilder")
+            library_dir = get_library_path() 
             folder_file = library_dir + os.sep + 'folders.txt'
             folder_index = []
 
@@ -533,8 +544,7 @@ class MAINPANEL_PT_nodecustombuilder(Panel):
                     except:
                         pass
 
-                library_dir = os.path.expanduser("~")
-                library_dir = os.path.join(library_dir, "Documents", "NodeCustomBuilder")
+                library_dir = get_library_path() 
 
                 rows = 6
 
@@ -573,8 +583,7 @@ class MAINPANEL_PT_nodecustombuilder(Panel):
                         except:
                             pass
 
-                    library_dir = os.path.expanduser("~")
-                    library_dir = os.path.join(library_dir, "Documents", "NodeCustomBuilder")
+                    library_dir = get_library_path() 
 
                     rows = 6
 
@@ -613,8 +622,7 @@ class MAINPANEL_PT_nodecustombuilder(Panel):
                         except:
                             pass
 
-                    library_dir = os.path.expanduser("~")
-                    library_dir = os.path.join(library_dir, "Documents", "NodeCustomBuilder")
+                    library_dir = get_library_path() 
 
                     rows = 6
 
@@ -680,8 +688,7 @@ class OFPropConfirmOperator(bpy.types.Operator):
 
             total_dict = {**dict, **dict_groups}
 
-            library_dir = os.path.expanduser("~")
-            library_dir = os.path.join(library_dir, "Documents", "NodeCustomBuilder")
+            library_dir = get_library_path() 
             print('osoite: ', library_dir)
             if (not (os.path.isdir(library_dir))):
                 os.makedirs(library_dir)
@@ -780,8 +787,7 @@ class FolderConfirmOperator(bpy.types.Operator):
                 type_mode = 'WL'
 
         if self.type != '':
-            library_dir = os.path.expanduser("~")
-            library_dir = os.path.join(library_dir, "Documents", "NodeCustomBuilder")
+            library_dir = get_library_path() 
             folder_file = library_dir + os.sep + 'folders.txt'
             '''
             with open(folder_file, "r+") as f:
@@ -874,8 +880,7 @@ class RenameConfirmOperator(bpy.types.Operator):
                 item_count = len(scn.custom_world)
 
         if self.type != '' and self.filename != '':
-            library_dir = os.path.expanduser("~")
-            library_dir = os.path.join(library_dir, "Documents", "NodeCustomBuilder")
+            library_dir = get_library_path() 
             folder_file = library_dir + os.sep + 'folders.txt'
 
             if (bpy.context.area.ui_type == 'CompositorNodeTree'):
@@ -964,6 +969,7 @@ class CustomProps(bpy.types.PropertyGroup):
 
 
 classes = (
+    NodeCustomBuilderPreferences,
     CUSTOM_OT_actions,
     DeleteFolder,
     DeleteSelected,
