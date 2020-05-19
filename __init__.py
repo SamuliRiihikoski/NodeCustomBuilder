@@ -41,9 +41,12 @@ from . import read_json
 
 class NodeCustomBuilderPreferences(bpy.types.AddonPreferences):
     bl_idname = __package__
+    
+    library_dir = os.path.expanduser("~")	         
+    library_dir = os.path.join(library_dir, "Documents", "NodeCustomBuilder")
 
     user_lib_path: StringProperty(name="Library Path",
-                                  default=os.path.join(os.path.dirname(__file__), "libraries"),
+                                  default=library_dir,
                                   subtype='DIR_PATH')
 
     def draw(self, context):
