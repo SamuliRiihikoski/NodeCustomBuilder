@@ -325,6 +325,42 @@ def read(filename):
         if node.name.startswith('__node__'):
             node.name = node.name[8:]
 
+    ''' Next calculate average center point and move selected nodes into center '''
+    
+    average_x = 0
+    average_y = 0
+    average_index = 0
+
+    for node in active_nodetree.nodes:
+        has_parent = True
+        if node.select == True:
+            try:
+                node.parent.name
+            except:
+                has_parent = False
+
+            if(has_parent == False):
+                average_x += node.location[0]
+                average_y += node.location[1]
+                average_index += 1
+    
+    average_x = average_x / average_index
+    average_y = average_y / average_index
+    
+    for node in active_nodetree.nodes:
+        has_parent = True
+        if node.select == True:
+            try:
+                node.parent.name
+            except:
+                has_parent = False
+
+            if(has_parent == False):
+                node.location[0] = node.location[0] - average_x
+                node.location[1] = node.location[1] - average_y
+    
+
+
 
 
 

@@ -524,7 +524,10 @@ def readExtraSettings(extra_settings, node):
         if setting[0] == 0:
             setattr(node, setting[1], setting[2])
         elif setting[0] == 1:
-            node.inputs[setting[1]].default_value = setting[2]
+            try:
+                node.inputs[setting[1]].default_value = setting[2]
+            except:
+                pass
         elif setting[0] == 2:
             node.outputs[setting[1]].default_value = setting[2]
 
