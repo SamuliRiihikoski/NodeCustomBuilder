@@ -88,6 +88,7 @@ def write_groupnodetrees(allgroups):
                             if(name_node_tree.startswith('__node__') == False):
                                 name_node_tree = '__node__' + name_node_tree
 
+                            group_settings = ExtraSetting.writeGroupExtraSettings(node)
                             nodes['node'].append({
                                 'node': node.bl_idname,
                                 'name': node.name,
@@ -99,7 +100,7 @@ def write_groupnodetrees(allgroups):
                                 'hidden_outputs': [],
                                 'height': node.height,
                                 'width': node.width,
-                                'extra_settings': [-1, -1, -1]
+                                'extra_settings': group_settings
                             })
                             new_groups.append(node.node_tree)
                         elif(node.type == 'GROUP_INPUT'):

@@ -347,8 +347,8 @@ class BlendSelectButtonOperator(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class IndexNode(bpy.types.Operator):
-    bl_idname = "node.index_node"
+class PresetLoad(bpy.types.Operator):
+    bl_idname = "node.preset_load"
     bl_label = "Index Node"
 
     filename : StringProperty(default='')
@@ -356,7 +356,7 @@ class IndexNode(bpy.types.Operator):
     def execute(self, context):
 
         if(bpy.context.active_object != None):
-            if(bpy.context.active_object.type == 'MESH'):
+            if(bpy.context.active_object.type == 'MESH' or bpy.context.active_object.type == 'CURVE'):
                 read_json.read(self.filename)
 
         return {'FINISHED'}
@@ -373,7 +373,7 @@ class LIBRARY_MT_node(bpy.types.Menu):
 
         for index, file in enumerate(os.listdir(library_dir)):
 
-            self.layout.operator("node.index_node", text=file[:-5]).filename = library_dir + os.sep + file
+            self.layout.operator("node.preset_load", text=file[:-5]).filename = library_dir + os.sep + file
         pass
 
 class ITEM_UL_items(UIList):
@@ -571,7 +571,7 @@ class MAINPANEL_PT_nodecustombuilder(Panel):
                 row = layout.row()
 
                 if (presets != []):
-                    row.operator('node.index_node', text="Load").filename = library_dir + os.sep + 'CM__' + bpy.context.scene.custom_folders + '__'+ active_item
+                    row.operator('node.preset_load', text="Load").filename = library_dir + os.sep + 'CM__' + bpy.context.scene.custom_folders + '__'+ active_item
         else:
 
             if(bpy.context.space_data.shader_type == 'OBJECT'):
@@ -610,7 +610,7 @@ class MAINPANEL_PT_nodecustombuilder(Panel):
                     row = layout.row()
 
                     if(presets != []):
-                        row.operator('node.index_node', text="Load Preset").filename = library_dir + os.sep + 'OB__' + bpy.context.scene.custom_folders + '__'+ active_item
+                        row.operator('node.preset_load', text="Load Preset").filename = library_dir + os.sep + 'OB__' + bpy.context.scene.custom_folders + '__'+ active_item
 
             elif (bpy.context.space_data.shader_type == 'WORLD'):
                 layout = self.layout
@@ -650,7 +650,7 @@ class MAINPANEL_PT_nodecustombuilder(Panel):
 
                     if (presets != []):
                         try:
-                            row.operator('node.index_node', text="Load").filename = library_dir + os.sep + 'WL__' + bpy.context.scene.custom_folders + '__'+ active_item
+                            row.operator('node.preset_load', text="Load").filename = library_dir + os.sep + 'WL__' + bpy.context.scene.custom_folders + '__'+ active_item
                         except:
                             pass
 
@@ -982,7 +982,7 @@ classes = (
     ITEM_UL_items,
     OFPropConfirmOperator,
     FolderConfirmOperator,
-    IndexNode,
+    PresetLoad,
     LIBRARY_MT_node,
     CustomProps,
     RenameConfirmOperator,

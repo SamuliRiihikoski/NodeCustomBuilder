@@ -119,7 +119,7 @@ def read(filename):
                 if node['parent'] != '':
                     new_node.parent = group_nodetree.nodes[node['parent']]
 
-                if (node['extra_settings'][0] != -1):
+                if (node['extra_settings'][0] != -1 and new_node.type != 'GROUP'):
                     if (bpy.context.area.ui_type == 'CompositorNodeTree'):
                         ExtraSettingComp.readExtraSettings(node['extra_settings'], new_node)
                     else:
@@ -317,6 +317,24 @@ def read(filename):
                             node.location = seek[1]
                             break
 
+    ''' We skipped to set GROUP param in first loop. Now we need other loop to do this '''
+
+    for group in data['groups']:
+        g_name = group['name']
+        print(f'g_name: {g_name}')
+        for node in group['nodes']:
+            n_name = node['name']
+            print(f'n_name: {n_name}')
+            if node['node'] == 'ShaderNodeGroup' and len(node['extra_settings'])>0:
+                if (node['extra_settings'][0] != -1):
+                    if (bpy.context.area.ui_type == 'CompositorNodeTree'):
+                        ExtraSettingComp.readExtraSettings(node['extra_settings'], bpy.data.node_groups[g_name].nodes[n_name])
+                    else:
+                        ExtraSetting.readExtraSettings(node['extra_settings'], bpy.data.node_groups[g_name].nodes[n_name])
+
+
+    ''' Remove __node__ tag from nodes and groups name '''
+
     for node in active_nodetree.nodes:
         if node.name.startswith('__node__'):
             node.name = node.name[8:]
@@ -324,6 +342,42 @@ def read(filename):
     for node in bpy.data.node_groups:
         if node.name.startswith('__node__'):
             node.name = node.name[8:]
+
+    ''' Next calculate average center point and move selected nodes into center '''
+    
+    average_x = 0
+    average_y = 0
+    average_index = 0
+
+    for node in active_nodetree.nodes:
+        has_parent = True
+        if node.select == True:
+            try:
+                node.parent.name
+            except:
+                has_parent = False
+
+            if(has_parent == False):
+                average_x += node.location[0]
+                average_y += node.location[1]
+                average_index += 1
+    
+    average_x = average_x / average_index
+    average_y = average_y / average_index
+    
+    for node in active_nodetree.nodes:
+        has_parent = True
+        if node.select == True:
+            try:
+                node.parent.name
+            except:
+                has_parent = False
+
+            if(has_parent == False):
+                node.location[0] = node.location[0] - average_x
+                node.location[1] = node.location[1] - average_y
+    
+
 
 
 
