@@ -20,6 +20,7 @@
 import bpy
 from . import ExtraSetting
 from . import ExtraSettingComp
+from . import ExtraSettingGeo
 
 def find_all_groupnodes(base_group_nodes):
 
@@ -178,6 +179,8 @@ def write_groupnodetrees(allgroups):
 
                             if (bpy.context.area.ui_type == 'CompositorNodeTree'):
                                 nodes = ExtraSettingComp.writeExtraSettings(nodes, node, '', nimi, 'SUB_TREE')
+                            elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+                                nodes = ExtraSettingGeo.writeExtraSettings(nodes, node, '', nimi, 'SUB_TREE')
                             else:
                                 nodes = ExtraSetting.writeExtraSettings(nodes, node, '', nimi, 'SUB_TREE')
 

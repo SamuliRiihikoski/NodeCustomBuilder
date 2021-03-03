@@ -29,29 +29,29 @@ def checkVersion():
 def writeGroupExtraSettings(node):
 
     settings = []
+    empty_setting = False
 
     if(len(node.inputs) > 0):
 
         for index, input in enumerate(node.inputs):
-            print('input', input)
             if input.type == 'VALUE':
                 settings.append([11, index, node.inputs[index].default_value, node.node_tree.inputs[index].min_value, node.node_tree.inputs[index].max_value])
-
+                empty_setting = True
             elif input.type == 'RGBA':
                 settings.append([10, index,
                                  [node.inputs[index].default_value[0],
                                   node.inputs[index].default_value[1],
                                   node.inputs[index].default_value[2],
                                   node.inputs[index].default_value[3]]])
-
+                empty_setting = True
             elif input.type == 'VECTOR':
                 settings.append([10, index,
                                  [node.inputs[index].default_value[0],
                                   node.inputs[index].default_value[1],
                                   node.inputs[index].default_value[2]]])
-
-    else:
-
+                empty_setting = True
+    
+    if empty_setting == False:
         settings.append([-1,-1,-1])
 
     return settings
@@ -64,29 +64,45 @@ def writeExtraSettings(dict, node, type, nimi, main_mode):
     color_ramp_data = []
 
     # OUTPUTS
+
     for output in node.outputs:
         settings.append([-2, output.type, output.name, output.hide])    
 
     #  SETTINGS
+
     settings = node_attributes(node, settings)
 
     # INPUTS
+
+    socket_number = 0
     for Ninput in node.inputs:
-        if Ninput.type == 'VALUE':
-            settings.append([1, Ninput.name, Ninput.default_value, Ninput.hide])
+
+        if (Ninput.type == 'VALUE' or Ninput.type == 'BOOLEAN' or Ninput.type == 'STRING' or Ninput.type == 'INT'):
+            settings.append([1, socket_number, Ninput.default_value, Ninput.hide])
+
         elif Ninput.type == 'RGBA':
             settings.append([1, Ninput.name,
                         [Ninput.default_value[0],
                         Ninput.default_value[1],
                         Ninput.default_value[2],
                         Ninput.default_value[3]], Ninput.hide])
+
         elif Ninput.type == 'VECTOR':
-            settings.append([1, Ninput.name,
+            settings.append([1, socket_number,
                     [Ninput.default_value[0],
                     Ninput.default_value[1],
                     Ninput.default_value[2]], Ninput.hide])
+
         elif Ninput.type == 'SHADER':
             settings.append([5, Ninput.name, Ninput.type, Ninput.hide])
+
+        elif Ninput.type == 'OBJECT' and Ninput.default_value != None:
+            settings.append([3, socket_number, Ninput.default_value.name, Ninput.hide])
+
+        elif Ninput.type == 'COLLECTION' and Ninput.default_value != None:
+            settings.append([13, socket_number, Ninput.default_value.name, Ninput.hide])
+
+        socket_number += 1
 
 
     if(len(node.outputs) > 0):
@@ -521,15 +537,26 @@ def node_attributes(node, settings):
 
 def readExtraSettings(extra_settings, node):
     for setting in extra_settings:
+
         if setting[0] == 0:
             setattr(node, setting[1], setting[2])
+
         elif setting[0] == 1:
             try:
                 node.inputs[setting[1]].default_value = setting[2]
             except:
                 pass
+
         elif setting[0] == 2:
             node.outputs[setting[1]].default_value = setting[2]
+
+        # INPUT SOCKET: OBJECT
+        
+        elif setting[0] == 3:
+            try:
+                node.inputs[setting[1]].default_value = bpy.data.objects[setting[2]]
+            except:
+                pass
 
         # Image loading for image texture node
 
@@ -589,7 +616,6 @@ def readExtraSettings(extra_settings, node):
         # Image1 ja Image2 kasittely taalla // 10
 
         elif setting[0] == 10:
-            print(setting)
             node.inputs[setting[1]].default_value = setting[2]
 
         # Group Node
@@ -602,6 +628,14 @@ def readExtraSettings(extra_settings, node):
         elif setting[0] == 12:
             if node.image != None:
                 node.image.colorspace_settings.name = setting[2]
+
+        # INPUT SOCKET: COLLECTION
+        
+        elif setting[0] == 13:
+            try:
+                node.inputs[setting[1]].default_value = bpy.data.collections[setting[2]]
+            except:
+                pass
 
         elif setting[0] == 'script':
             textFile = bpy.data.texts.new(setting[1])

@@ -21,6 +21,7 @@ import bpy
 from . import NodeGroupComputer
 from . import ExtraSetting
 from . import ExtraSettingComp
+from . import ExtraSettingGeo
 
 def newname_to_node(nodes):
     for node in nodes:
@@ -150,6 +151,8 @@ def write(dict, nodes):
                 elif (node.type != 'FRAME'):
                     if(bpy.context.area.ui_type == 'CompositorNodeTree'):
                         dict = ExtraSettingComp.writeExtraSettings(dict, node, '', nimi, 'MAIN_TREE')
+                    elif(bpy.context.area.ui_type == 'GeometryNodeTree'):
+                        dict = ExtraSettingGeo.writeExtraSettings(dict, node, '', nimi, 'MAIN_TREE')
                     else:
                         dict = ExtraSetting.writeExtraSettings(dict, node, '', nimi, 'MAIN_TREE')
     for select_node in all_nodes:

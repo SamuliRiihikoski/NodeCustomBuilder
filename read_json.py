@@ -21,6 +21,7 @@ import bpy
 import json
 from . import ExtraSetting
 from . import ExtraSettingComp
+from . import ExtraSettingGeo
 
 def read(filename):
 
@@ -35,6 +36,10 @@ def read(filename):
             bpy.context.scene.use_nodes = True
 
         active_nodetree = bpy.context.scene.node_tree
+
+    elif(bpy.context.area.ui_type == 'GeometryNodeTree'):
+        active_nodetree = bpy.context.active_object.modifiers['GeometryNodes'].node_group
+
     else:
         if (bpy.context.space_data.shader_type == 'OBJECT'):
             active_nodetree = bpy.context.active_object.active_material.node_tree
@@ -100,6 +105,8 @@ def read(filename):
         for group in data['groups']:
             if (bpy.context.area.ui_type == 'CompositorNodeTree'):
                 group_nodetree = bpy.data.node_groups.new(type="CompositorNodeTree", name=group['name'])
+            elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+                group_nodetree = bpy.data.node_groups.new(type="GeometryNodeTree", name=group['name'])
             else:
                 group_nodetree = bpy.data.node_groups.new(type="ShaderNodeTree", name=group['name'])
 
@@ -122,6 +129,8 @@ def read(filename):
                 if (node['extra_settings'][0] != -1 and new_node.type != 'GROUP'):
                     if (bpy.context.area.ui_type == 'CompositorNodeTree'):
                         ExtraSettingComp.readExtraSettings(node['extra_settings'], new_node)
+                    elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+                        ExtraSettingGeo.readExtraSettings(node['extra_settings'], new_node)
                     else:
                         ExtraSetting.readExtraSettings(node['extra_settings'], new_node)
 
@@ -185,6 +194,8 @@ def read(filename):
                 if(p['extra_settings'][0] != -1):
                     if(bpy.context.area.ui_type == 'CompositorNodeTree'):
                         ExtraSettingComp.readExtraSettings(p['extra_settings'], node_new)
+                    elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+                        ExtraSettingGeo.readExtraSettings(p['extra_settings'], node_new)
                     else:
                         ExtraSetting.readExtraSettings(p['extra_settings'], node_new)
 
@@ -211,6 +222,8 @@ def read(filename):
                     if (p['extra_settings'][0] != -1):
                         if (bpy.context.area.ui_type == 'CompositorNodeTree'):
                             ExtraSettingComp.readExtraSettings(p['extra_settings'], node_new)
+                        elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+                            ExtraSettingGeo.readExtraSettings(p['extra_settings'], node_new)
                         else:
                             ExtraSetting.readExtraSettings(p['extra_settings'], node_new)
                 else:
@@ -329,6 +342,8 @@ def read(filename):
                 if (node['extra_settings'][0] != -1):
                     if (bpy.context.area.ui_type == 'CompositorNodeTree'):
                         ExtraSettingComp.readExtraSettings(node['extra_settings'], bpy.data.node_groups[g_name].nodes[n_name])
+                    elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+                        ExtraSettingGeo.readExtraSettings(node['extra_settings'], bpy.data.node_groups[g_name].nodes[n_name])
                     else:
                         ExtraSetting.readExtraSettings(node['extra_settings'], bpy.data.node_groups[g_name].nodes[n_name])
 

@@ -105,6 +105,9 @@ class DeleteFolder(bpy.types.Operator):
 
         if (bpy.context.area.ui_type == 'CompositorNodeTree'):
             type_mode = 'CM'
+        elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+            type_mode = 'GM'
+
         else:
             if (bpy.context.space_data.shader_type == 'OBJECT'):
                 type_mode = 'OB'
@@ -125,6 +128,15 @@ class DeleteFolder(bpy.types.Operator):
                     os.remove(osoite)
                     if (scn.custom_comp_index > 0):
                         scn.custom_comp_index -= 1
+        
+        elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+            name_begin = 'GM__' + bpy.context.scene.custom_folders + '__'
+            for file in os.listdir(library_dir):
+                if (file.startswith(name_begin)):
+                    osoite = library_dir + os.sep + file
+                    os.remove(osoite)
+                    if (scn.custom_geo_index > 0):
+                        scn.custom_geo_index -= 1
 
         else:
 
@@ -187,6 +199,21 @@ class DeleteSelected(bpy.types.Operator):
                 if (scn.custom_comp_index > 0):
                     scn.custom_comp_index -= 1
 
+        elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+
+            presets = scn.custom_geo.items()
+
+            if (presets != []):
+                presets = scn.custom_geo.items()
+                preset_name = 'GM__' + bpy.context.scene.custom_folders + '__' + presets[scn.custom_geo_index][0] + '.json'
+                scn.custom_geo.remove(scn.custom_geo_index)
+
+                full_path = library_dir + os.sep + preset_name
+                if (os.path.isfile(full_path)):
+                    os.remove(full_path)
+                if (scn.custom_geo_index > 0):
+                    scn.custom_gep_index -= 1
+
         else:
 
             if (bpy.context.space_data.shader_type == 'OBJECT'):
@@ -243,6 +270,8 @@ class BlendSelectOperator(bpy.types.Operator):
                     scn.custom_world.remove(0)
                 for one in scn.custom_comp:
                     scn.custom_comp.remove(0)
+                for one in scn.custom_geo:
+                    scn.custom_geo.remove(0)
 
                 # iterate through the selected files
                 for file in os.listdir(library_dir):
@@ -265,6 +294,12 @@ class BlendSelectOperator(bpy.types.Operator):
                         item.name = file[:-5]
                         test_name = item.name.split('__')
                         item.name = test_name[2]
+                    elif (file.startswith('GM__' + bpy.context.scene.custom_folders + '__')):
+                        item = scn.custom_geo.add()
+                        item.id = len(scn.custom_geo)
+                        item.name = file[:-5]
+                        test_name = item.name.split('__')
+                        item.name = test_name[2]
             else:
                 for one in scn.custom:
                     scn.custom.remove(0)
@@ -272,6 +307,8 @@ class BlendSelectOperator(bpy.types.Operator):
                     scn.custom_world.remove(0)
                 for one in scn.custom_comp:
                     scn.custom_comp.remove(0)
+                for one in scn.custom_geo:
+                    scn.custom_geo.remove(0)
 
 
             material = bpy.context.object.active_material
@@ -295,6 +332,9 @@ class BlendSelectButtonOperator(bpy.types.Operator):
         if (bpy.context.area.ui_type == 'CompositorNodeTree'):
             type = 'CM__'
             type_mode ='CM'
+        elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+            type = 'GM__'
+            type_mode ='GM'
         else:
             if (bpy.context.space_data.shader_type == 'OBJECT'):
                 type = 'OB__'
@@ -433,6 +473,22 @@ class CUSTOM_OT_actions(bpy.types.Operator):
                     if (scn.custom_comp_index > 0):
                         scn.custom_comp_index -= 1
 
+            elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+
+                presets = scn.custom_geo.items()
+
+                if (presets != []):
+                    presets = scn.custom_geo.items()
+                    preset_name = 'GM__' + bpy.context.scene.custom_folders + '__' + presets[scn.custom_geo_index][
+                        0] + '.json'
+                    scn.custom_geo.remove(scn.custom_geo_index)
+
+                    full_path = library_dir + os.sep + preset_name
+                    if (os.path.isfile(full_path)):
+                        os.remove(full_path)
+                    if (scn.custom_geo_index > 0):
+                        scn.custom_geo_index -= 1
+
             else:
 
                 if (bpy.context.space_data.shader_type == 'OBJECT'):
@@ -474,10 +530,16 @@ class CUSTOM_OT_actions(bpy.types.Operator):
             if (bpy.context.area.ui_type == 'CompositorNodeTree'):
                 type = 'CM__'
                 type_mode = 'CM'
+
+            elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+                type = 'GM__'
+                type_mode = 'GM'
+
             else:
                 if (bpy.context.space_data.shader_type == 'OBJECT'):
                     type = 'OB__'
                     type_mode = 'OB'
+
                 elif (bpy.context.space_data.shader_type == 'WORLD'):
                     type = 'WL__'
                     type_mode = 'WL'
@@ -572,6 +634,46 @@ class MAINPANEL_PT_nodecustombuilder(Panel):
 
                 if (presets != []):
                     row.operator('node.preset_load', text="Load").filename = library_dir + os.sep + 'CM__' + bpy.context.scene.custom_folders + '__'+ active_item
+    
+        elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+            layout = self.layout
+            scn = bpy.context.scene
+
+            if (scn != None):
+                presets = scn.custom_geo.items()
+
+                if (presets != []):
+                    try:
+                        active_item = presets[scn.custom_geo_index][0] + '.json'
+                    except:
+                        pass
+
+                library_dir = get_library_path() 
+
+                rows = 6
+
+                row = layout.row(align=True)
+                row.prop(bpy.context.scene, "custom_folders", text="")
+                row.separator()
+                row.operator("custom.list_action", icon='NEWFOLDER', text="").action = 'ADD_FOLDER'
+                row.operator("custom.list_action", icon='TRASH', text="").action = 'REMOVE_FOLDER'
+
+                row = layout.row()
+                row.template_list("ITEM_UL_items", "", scn, "custom_geo", scn, "custom_geo_index", rows=rows)
+
+                col = row.column(align=True)
+                col.operator("custom.list_action", icon='ADD', text="").action = 'ADD'
+                col.operator("custom.list_action", icon='REMOVE', text="").action = 'REMOVE'
+                col.separator()
+                col.operator("custom.list_action", icon='SORTALPHA', text="").action = 'RENAME'
+                col.separator()
+                col.operator("custom.list_action", icon='FILE_REFRESH', text="").action = 'FILE_REFRESH'
+
+                row = layout.row()
+
+                if (presets != []):
+                    row.operator('node.preset_load', text="Load").filename = library_dir + os.sep + 'GM__' + bpy.context.scene.custom_folders + '__'+ active_item
+
         else:
 
             if(bpy.context.space_data.shader_type == 'OBJECT'):
@@ -681,6 +783,9 @@ class OFPropConfirmOperator(bpy.types.Operator):
 
             if(bpy.context.area.ui_type == 'CompositorNodeTree'):
                 nodes = bpy.context.scene.node_tree.nodes
+            elif(bpy.context.area.ui_type == 'GeometryNodeTree'):
+                nodes = bpy.context.active_object.modifiers['GeometryNodes'].node_group.nodes
+
             else:
                 if (bpy.context.space_data.shader_type == 'OBJECT'):
                     nodes = bpy.context.active_object.active_material.node_tree.nodes
@@ -692,13 +797,18 @@ class OFPropConfirmOperator(bpy.types.Operator):
             total_dict = {**dict, **dict_groups}
 
             library_dir = get_library_path() 
-            print('osoite: ', library_dir)
+
             if (not (os.path.isdir(library_dir))):
                 os.makedirs(library_dir)
 
-            if(bpy.context.area.ui_type == 'CompositorNodeTree'):
+            if (bpy.context.area.ui_type == 'CompositorNodeTree'):
                 type = 'CM__'
                 file = library_dir + os.sep + type + bpy.context.scene.custom_folders + '__' + self.type + '.json'
+
+            elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+                type = 'GM__'
+                file = library_dir + os.sep + type + bpy.context.scene.custom_folders + '__' + self.type + '.json'
+
             else:
                 if (bpy.context.space_data.shader_type == 'OBJECT'):
                     type = 'OB__'
@@ -725,13 +835,19 @@ class OFPropConfirmOperator(bpy.types.Operator):
                         self.type = ("%s%.2d" % (self.type, name_index))
                 else:
                     looking = False
-            print('total_dict', total_dict)
+                
             with open(file, 'w') as outfile:
                 json.dump(total_dict, outfile, indent='    ')
 
             if(bpy.context.area.ui_type == 'CompositorNodeTree'):
                 item = scn.custom_comp.add()
                 item.id = len(scn.custom_comp)
+                item.name = self.type
+                self.type = ""
+            
+            elif(bpy.context.area.ui_type == 'GeometryNodeTree'):
+                item = scn.custom_geo.add()
+                item.id = len(scn.custom_geo)
                 item.name = self.type
                 self.type = ""
 
@@ -783,6 +899,9 @@ class FolderConfirmOperator(bpy.types.Operator):
 
         if (bpy.context.area.ui_type == 'CompositorNodeTree'):
             type_mode = 'CM'
+        elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+            type_mode = 'GM'
+            
         else:
             if (bpy.context.space_data.shader_type == 'OBJECT'):
                 type_mode = 'OB'
@@ -835,7 +954,6 @@ class RenameConfirmOperator(bpy.types.Operator):
 
     def execute(self, context):
 
-        print('CustomFolder1: ', bpy.context.scene.custom_folders)
         current_folder = bpy.context.scene.custom_folders
 
         if (bpy.context.area.ui_type == 'CompositorNodeTree'):
@@ -849,6 +967,18 @@ class RenameConfirmOperator(bpy.types.Operator):
                     pass
 
             self.filename = 'CM__'+ bpy.context.scene.custom_folders + '__' + active_item
+
+        elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+            scn = bpy.context.scene
+            presets = scn.custom_geo.items()
+
+            if (presets != []):
+                try:
+                    active_item = presets[scn.custom_geo_index][0] + '.json'
+                except:
+                    pass
+
+            self.filename = 'GM__'+ bpy.context.scene.custom_folders + '__' + active_item
 
         else:
             if (bpy.context.space_data.shader_type == 'OBJECT'):
@@ -876,6 +1006,9 @@ class RenameConfirmOperator(bpy.types.Operator):
 
         if (bpy.context.area.ui_type == 'CompositorNodeTree'):
             item_count = len(scn.custom_comp)
+        elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+            item_count = len(scn.custom_geo)
+
         else:
             if (bpy.context.space_data.shader_type == 'OBJECT'):
                 item_count = len(scn.custom)
@@ -891,6 +1024,13 @@ class RenameConfirmOperator(bpy.types.Operator):
                 type_i = 'CM'
                 active_item = scn.custom_comp[scn.custom_comp_index].name + '.json'
                 file = library_dir + os.sep + type + bpy.context.scene.custom_folders + '__' + active_item
+
+            elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+                type = 'GM__'
+                type_i = 'GM'
+                active_item = scn.custom_geo[scn.custom_geo_index].name + '.json'
+                file = library_dir + os.sep + type + bpy.context.scene.custom_folders + '__' + active_item
+
             else:
                 if (bpy.context.space_data.shader_type == 'OBJECT'):
                     type = 'OB__'
@@ -918,7 +1058,7 @@ class RenameConfirmOperator(bpy.types.Operator):
             if(os.path.isfile(file)):
                 os.replace(file, new)
                 delete_folder = True
-                print('CustomFolder2: ', bpy.context.scene.custom_folders)
+                
                 if(item_count == 1):
                     with open(folder_file, "r+") as f:
                         d = f.readlines()
@@ -947,6 +1087,8 @@ class RenameConfirmOperator(bpy.types.Operator):
         scn = bpy.context.scene
         if (bpy.context.area.ui_type == 'CompositorNodeTree'):
             active_item = scn.custom_comp[scn.custom_comp_index].name
+        elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
+            active_item = scn.custom_geo[scn.custom_geo_index].name
         else:
             if (bpy.context.space_data.shader_type == 'OBJECT'):
                 active_item = scn.custom[scn.custom_index].name
@@ -995,10 +1137,16 @@ def register():
 
     bpy.types.Scene.custom = CollectionProperty(type=CustomProps)
     bpy.types.Scene.custom_index = IntProperty(default = 0)
+    
     bpy.types.Scene.custom_world = CollectionProperty(type=CustomProps)
     bpy.types.Scene.custom_world_index = IntProperty(default=0)
+    
     bpy.types.Scene.custom_comp = CollectionProperty(type=CustomProps)
     bpy.types.Scene.custom_comp_index = IntProperty(default=0)
+    
+    bpy.types.Scene.custom_geo = CollectionProperty(type=CustomProps)
+    bpy.types.Scene.custom_geo_index = IntProperty(default=0)
+    
     bpy.types.Scene.custom_string = StringProperty(default="")
 
     bpy.types.Scene.custom_folders = bpy.props.EnumProperty(items=get_items)
@@ -1016,10 +1164,16 @@ def unregister():
 
     del bpy.types.Scene.custom
     del bpy.types.Scene.custom_index
+
     del bpy.types.Scene.custom_world
     del bpy.types.Scene.custom_world_index
+
     del bpy.types.Scene.custom_comp
     del bpy.types.Scene.custom_comp_index
+
+    del bpy.types.Scene.custom_geo
+    del bpy.types.Scene.custom_geo_index
+
     del bpy.types.Scene.custom_string
 
 
