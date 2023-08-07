@@ -33,6 +33,7 @@ def writeGroupExtraSettings(node):
     if(len(node.inputs) > 0):
 
         for index, input in enumerate(node.inputs):
+            print('input', input)
             if input.type == 'VALUE':
                 settings.append([11, index, node.inputs[index].default_value, node.node_tree.inputs[index].min_value, node.node_tree.inputs[index].max_value])
 
@@ -429,6 +430,7 @@ def readExtraSettings(extra_settings, node):
         # Image1 ja Image2 kasittely taalla // 10
 
         elif setting[0] == 10:
+            print(setting)
             node.inputs[setting[1]].default_value = setting[2]
 
         # Group Node
