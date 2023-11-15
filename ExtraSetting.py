@@ -79,7 +79,7 @@ def writeExtraSettings(dict, node, type, nimi, main_mode):
     for Ninput in node.inputs:
 
         if (Ninput.type == 'VALUE' or Ninput.type == 'BOOLEAN' or Ninput.type == 'STRING' or Ninput.type == 'INT'):
-            settings.append([1, socket_number, Ninput.default_value, Ninput.hide])
+            settings.append([1, socket_number, Ninput.default_value, Ninput.hide, Ninput.name])
 
         elif Ninput.type == 'RGBA':
             settings.append([1, Ninput.name,
@@ -92,7 +92,7 @@ def writeExtraSettings(dict, node, type, nimi, main_mode):
             settings.append([1, socket_number,
                     [Ninput.default_value[0],
                     Ninput.default_value[1],
-                    Ninput.default_value[2]], Ninput.hide])
+                    Ninput.default_value[2]], Ninput.hide, Ninput.name])
 
         elif Ninput.type == 'SHADER':
             settings.append([5, Ninput.name, Ninput.type, Ninput.hide])
