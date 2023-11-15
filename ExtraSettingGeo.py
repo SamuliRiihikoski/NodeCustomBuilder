@@ -309,7 +309,6 @@ def node_attributes(node, settings):
     elif node.type == 'POINTS_TO_VOLUME':
 
         settings.append([0, 'resolution_mode', node.resolution_mode])
-        settings.append([0, 'input_type_radius', node.input_type_radius])
 
     elif node.type == 'VOLUME_TO_MESH':
 
