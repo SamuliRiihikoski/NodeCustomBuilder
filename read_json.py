@@ -20,8 +20,6 @@
 import bpy
 import json
 from . import ExtraSetting
-from . import ExtraSettingComp
-from . import ExtraSettingGeo
 
 def read(filename):
 
@@ -54,13 +52,13 @@ def read(filename):
     type_not = []
     used_frames = []
     new_nodes = []
-    imported_frames = []
     frame_and_location = []
 
     with open(filename) as json_file:
         data = json.load(json_file)
 
-        ''' Material Settings'''
+        # MATERIAL SETTINGS
+
         active_material = bpy.context.object.active_material
         if (bpy.context.space_data.shader_type == 'OBJECT'):
             if data.get('material'):
@@ -76,31 +74,7 @@ def read(filename):
                     active_material.pass_index = material['pass_index']
 
 
-        ''' Let's first read external nodetrees and build them '''
-
-        for frame in data['frames']:
-
-            new_frame = active_nodetree.nodes.new(frame['node'])
-            new_frame.name = frame['name']
-            #new_frame.location = frame['location']
-            new_frame.use_custom_color = frame['use_color']
-            new_frame.color[0] = frame['color'][0]
-            new_frame.color[1] = frame['color'][1]
-            new_frame.color[2] = frame['color'][2]
-            new_frame.height = frame['height']
-            new_frame.width = frame['width']
-            new_frame.label = frame['label']
-            if frame.get('label_size'):
-                new_frame.label_size = frame['label_size']
-
-            imported_frames.append(new_frame.name)
-
-        for frame in data['frames']:
-            if (frame['parent'] != ''):
-                try:
-                    active_nodetree.nodes[frame['name']].parent = active_nodetree.nodes[frame['parent']]
-                except:
-                    pass
+        # CREATE GROUP NODE TREES 
 
         for group in data['groups']:
             if (bpy.context.area.ui_type == 'CompositorNodeTree'):
@@ -117,7 +91,7 @@ def read(filename):
                     new_node.label = node['label']
                 except:
                     pass
-                print ('NODE name: ' + node['name'])
+
                 new_node.hide = node['hide']
                 new_node.height = node['height']
                 new_node.width = node['width']
@@ -126,13 +100,10 @@ def read(filename):
                 if node['parent'] != '':
                     new_node.parent = group_nodetree.nodes[node['parent']]
 
-                if (node['extra_settings'][0] != -1 and new_node.type != 'GROUP'):
-                    if (bpy.context.area.ui_type == 'CompositorNodeTree'):
-                        ExtraSettingComp.readExtraSettings(node['extra_settings'], new_node)
-                    elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
-                        ExtraSettingGeo.readExtraSettings(node['extra_settings'], new_node)
-                    else:
-                        ExtraSetting.readExtraSettings(node['extra_settings'], new_node)
+                # Group interface is build later (when selecting nodetrees)
+                if (len(node['extra_settings']) != 0 and new_node.type != 'GROUP'):
+                    ExtraSetting.readExtraSettings(node['extra_settings'], new_node)
+           
 
                 if(new_node.type == 'FRAME'):
                     new_node.use_custom_color = node['use_color']
@@ -143,105 +114,46 @@ def read(filename):
                     new_node.height = node['height']
                     new_node.width = node['width']
                     new_node.label = node['label']
-                    if node.get('label_size'):
-                        new_node.label_size = node['label_size']
+                    #if node.get('label_size'):
+                    #    new_node.label_size = node['label_size']
                     frame_and_location.append([node['name'],node['location']])
                     if node['parent'] != '':
                         new_node.parent = group_nodetree.nodes[node['parent']]
 
+        
 
-                elif(new_node.type == 'GROUP_OUTPUT'):
-                    for input in node['inputs']:
-                        group_nodetree.outputs.new(input[0], input[1])
-                elif (new_node.type == 'GROUP_INPUT'):
-                    for input in node['outputs']:
-                        group_nodetree.inputs.new(input[0], input[1])
+        # CREATE BASE TREE NODES
 
-                else:
-                    if (bpy.context.area.ui_type != 'CompositorNodeTree'):
-                        if (len(node['hidden_outputs']) > 0):
-                            for output in node['hidden_outputs']:
-                                new_node.outputs[output[0]].hide = True
-
-        #bpy.data.node_groups['NodeGroup'].nodes['Frame'].location = []
-        ''' Next, let's jump to the main node tree and start to build it node by node'''
-
+        # FIRST PASS CREATES NODES
         for p in data['nodes']:
+            node_new = active_nodetree.nodes.new(p['node'])
+             
+            active_nodetree.nodes[-1].name = p['name']
+            active_nodetree.nodes[-1].label = p['label']
+            active_nodetree.nodes[-1].height = p['height']
+            active_nodetree.nodes[-1].width = p['width']
 
-            if (p['main_socket_type'] == ''):
+            if(active_nodetree.nodes[-1].type == 'GROUP'):
+                if p['node_tree'] != '':
+                    active_nodetree.nodes[-1].node_tree = bpy.data.node_groups[p['node_tree']]
+            
+            active_nodetree.nodes[-1].location = p['location']
+            new_nodes.append(node_new.name)
 
-                node_new = active_nodetree.nodes.new(p['node'])
+            if(len(p['extra_settings']) != 0):
+                ExtraSetting.readExtraSettings(p['extra_settings'], node_new)
 
-                if(p['parent'] != ''):
-                    try:
-                        active_nodetree.nodes[-1].parent = active_nodetree.nodes[p['parent']]
-                    except:
-                        print('ei yoim')
-
-                active_nodetree.nodes[-1].name = p['name']
-                try:
-                    active_nodetree.nodes[-1].label = p['label']
-                except:
-                    pass
-                active_nodetree.nodes[-1].height = p['height']
-                active_nodetree.nodes[-1].width = p['width']
-                if(active_nodetree.nodes[-1].type == 'GROUP'):
-                    if p['node_tree'] != '':
-                        active_nodetree.nodes[-1].node_tree = bpy.data.node_groups[p['node_tree']]
-                active_nodetree.nodes[-1].location = p['location']
-                new_nodes.append(node_new.name)
-
-                if(p['extra_settings'][0] != -1):
-                    if(bpy.context.area.ui_type == 'CompositorNodeTree'):
-                        ExtraSettingComp.readExtraSettings(p['extra_settings'], node_new)
-                    elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
-                        ExtraSettingGeo.readExtraSettings(p['extra_settings'], node_new)
-                    else:
-                        ExtraSetting.readExtraSettings(p['extra_settings'], node_new)
-
-
-            else:
-
-                if (active_nodetree.nodes.active.inputs[p['main_socket_type']].is_linked == False):
-                    node_new = active_nodetree.nodes.new(p['node'])
-
-                    if (p['parent'] != ''):
-                        try:
-                            active_nodetree.nodes[-1].parent = active_nodetree.nodes[p['parent']]
-                        except:
-                            print('heee')
-
-                    active_nodetree.nodes[-1].name = p['name']
-                    active_nodetree.nodes[-1].height = p['height']
-                    active_nodetree.nodes[-1].width = p['width']
-                    if (active_nodetree.nodes[-1].type == 'GROUP'):
-                        active_nodetree.nodes[-1].node_tree = bpy.data.node_groups[p['node_tree']]
-                    active_nodetree.nodes[-1].location = p['location']
-                    new_nodes.append(node_new.name)
-
-                    if (p['extra_settings'][0] != -1):
-                        if (bpy.context.area.ui_type == 'CompositorNodeTree'):
-                            ExtraSettingComp.readExtraSettings(p['extra_settings'], node_new)
-                        elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
-                            ExtraSettingGeo.readExtraSettings(p['extra_settings'], node_new)
-                        else:
-                            ExtraSetting.readExtraSettings(p['extra_settings'], node_new)
-                else:
-                    type_not.append(p['main_socket_type'])
-            if (bpy.context.area.ui_type != 'CompositorNodeTree'):
-                if (len(p['hidden_outputs']) > 0):
-                    for output in p['hidden_outputs']:
-                        node_new.outputs[output[0]].hide = True
-
-
-
-        print('new_nodes:', new_nodes)
+        # SECOND PASS CONNECTS PARENTS
+        for p in data['nodes']:
+            if 'parent' in p.keys():
+                active_nodetree.nodes[p['name']].parent = active_nodetree.nodes[p['parent']]
+             
+        # CONNECT FRAMES WITH NODES IN BASE TREE
 
         for new_node_name in new_nodes:
-            objekti = active_nodetree.nodes[new_node_name]
-            print('\nOB:',objekti.name)
-            if(objekti.parent != ''):
-                temp = objekti.parent
+            node = active_nodetree.nodes[new_node_name]
+            if(node.parent != None):
+                temp = node.parent
                 while (temp != None):
 
                     if temp.name not in used_frames:
@@ -251,75 +163,51 @@ def read(filename):
                     else:
                         temp = None
 
-        for frame in data['frames']:
-
-             active_nodetree.nodes[frame['name']].location = frame['location']
+        # SOCKET CONNECTIONS IN BASE TREE
 
         for link in data['links']:
-            if link['main_socket_type'] in type_not:
+          
+            try:
+                active_nodetree.nodes[link['output_node']]
+                active_nodetree.nodes[link['input_node']]
+        
+                active_nodetree.links.new(active_nodetree.nodes[link['output_node']].outputs[link['output_socket']],
+                                        active_nodetree.nodes[link['input_node']].inputs[link['input_socket']])
+            except:
+                print('ERROR: link problem')
                 pass
-            else:
-                create_link = True
 
-                try:
-                    active_nodetree.nodes[link['output_node']]
-                except:
-                    create_link = False
-
-                try:
-                    active_nodetree.nodes[link['input_node']]
-                except:
-                    create_link = False
-
-                if(create_link):
-                    try:
-                        active_nodetree.links.new(active_nodetree.nodes[link['output_node']].outputs[link['output_socket']],
-                                              active_nodetree.nodes[link['input_node']].inputs[link['input_socket']])
-                    except:
-                        pass
-
-
-
-    ''' Asetetaan nodetreet group nodiin ja tehdaan linkitys nodetreee ryhmissa'''
+    # NODE TREES INTO GROUP NODES (Creating group interface here)
 
     for group in data['groups']:
         group_tree = bpy.data.node_groups[group['name']]
 
-        if(bpy.context.area.ui_type == 'CompositorNodeTree'):
+        for node in group['nodes']:
+            if (node['node'].endswith('NodeGroup')):
+                nd = group_tree.nodes[node['name']]
+                nd.node_tree = bpy.data.node_groups[node['node_tree']]
+                ExtraSetting.readExtraSettings(node['extra_settings'], nd)
 
-            for node in group['nodes']:
-                if (node['node'] == 'CompositorNodeGroup'):
-                    group_tree.nodes[node['name']].node_tree = bpy.data.node_groups[node['node_tree']]
+    
+    # SOCKET CONNECTIONS FOR GROUP NODE TREES
 
-        else:
-
-            for node in group['nodes']:
-                if(node['node'] == 'ShaderNodeGroup'):
-                    if node['node_tree'] != '':
-                        try:
-                            print('nodeNAME: ' + group_tree.nodes[node['name']].name)
-                        except:
-                            pass
-                        print ('NODETREE: ' + node['node_tree'])
-                        try:
-                            group_tree.nodes[node['name']].node_tree = bpy.data.node_groups[node['node_tree']]
-                        except:
-                            pass
+    for group in bpy.data.node_groups:
+        name = group.name
+        print(name)
 
     for group in data['groups']:
         group_tree = bpy.data.node_groups[group['name']]
+        print(group_tree.name)
 
         for link in group['links']:
-
+            print(link)
             try:
-                from_index = link[4]
+                group_tree.links.new(group_tree.nodes[link[0]].outputs[link[1]], group_tree.nodes[link[2]].inputs[link[3]])
             except:
-                from_index = link[1]
-
-            try:
-                group_tree.links.new(group_tree.nodes[link[0]].outputs[from_index], group_tree.nodes[link[2]].inputs[link[3]])
-            except:
+                print('soxket error')
                 pass
+
+    # FRAMES RE-LOCATION
 
     for group in bpy.data.node_groups:
         for node in group.nodes:
@@ -334,19 +222,21 @@ def read(filename):
 
     for group in data['groups']:
         g_name = group['name']
-        print(f'g_name: {g_name}')
-        for node in group['nodes']:
-            n_name = node['name']
-            print(f'n_name: {n_name}')
-            if node['node'] == 'ShaderNodeGroup' and len(node['extra_settings'])>0:
-                if (node['extra_settings'][0] != -1):
-                    if (bpy.context.area.ui_type == 'CompositorNodeTree'):
-                        ExtraSettingComp.readExtraSettings(node['extra_settings'], bpy.data.node_groups[g_name].nodes[n_name])
-                    elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
-                        ExtraSettingGeo.readExtraSettings(node['extra_settings'], bpy.data.node_groups[g_name].nodes[n_name])
-                    else:
-                        ExtraSetting.readExtraSettings(node['extra_settings'], bpy.data.node_groups[g_name].nodes[n_name])
+        for group_node in group['nodes']:
+            n_name = group_node['name']
+            node = bpy.data.node_groups[g_name].nodes[n_name]
+            if group_node['node'] == 'ShaderNodeGroup' and len(group_node['extra_settings'])>0:
+                if (len(group_node['extra_settings']) != 0):
+                    ExtraSetting.readExtraSettings(group_node['extra_settings'], bpy.data.node_groups[g_name].nodes[n_name])
+            
+            if node.type == 'GROUP_INPUT':
+                for link in node.outputs:
+                    link.hide = True
 
+            if node.type == 'GROUP_OUTPUT':
+                for link in node.inputs:
+                    link.hide = True
+               
 
     ''' Remove __node__ tag from nodes and groups name '''
 
@@ -376,9 +266,13 @@ def read(filename):
                 average_x += node.location[0]
                 average_y += node.location[1]
                 average_index += 1
-    
-    average_x = average_x / average_index
-    average_y = average_y / average_index
+
+    if average_index == 0:
+        average_x = 0
+        average_y = 0
+    else:
+        average_x = average_x / average_index
+        average_y = average_y / average_index
     
     for node in active_nodetree.nodes:
         has_parent = True

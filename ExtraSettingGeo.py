@@ -19,135 +19,306 @@
 
 import bpy
 import os
-from . import NodeGroupComputer
+from enum import Enum
+import numpy
+
+
+class settingType(int, Enum):
+    OUTPUT: int = -2
+    PARAM: int = 0
+    INPUT: int = 1
+    OBJECT: int = 3
+    IMAGE: int = 4
+    COLOR_RAMP1: int = 7
+    CoLOR_RAMP2: int = 8
+    CURVE: int = 9
+    COLLECTION: int = 13
+    SELECT_IMAGE: int = 14
+    SELECT_TEXTURE: int = 15
+    SELECT_MATERIAL: int = 16
+    MULTI_OPTION: int = 17
+    SELECT_FONT: int = 18
+
 
 def checkVersion():
     numero = bpy.app.version
     tulos = int(eval(f"{numero[0]}{numero[1]}"))
     return tulos
 
-def writeGroupExtraSettings(node):
 
-    settings = []
-
-    if(len(node.inputs) > 0):
-
-        for index, input in enumerate(node.inputs):
-            print('input', input)
-            if input.type == 'VALUE':
-                settings.append([11, index, node.inputs[index].default_value, node.node_tree.inputs[index].min_value, node.node_tree.inputs[index].max_value])
-
-            elif input.type == 'RGBA':
-                settings.append([10, index,
-                                 [node.inputs[index].default_value[0],
-                                  node.inputs[index].default_value[1],
-                                  node.inputs[index].default_value[2],
-                                  node.inputs[index].default_value[3]]])
-
-            elif input.type == 'VECTOR':
-                settings.append([10, index,
-                                 [node.inputs[index].default_value[0],
-                                  node.inputs[index].default_value[1],
-                                  node.inputs[index].default_value[2]]])
-
-    else:
-
-        settings.append([-1,-1,-1])
-
-    return settings
-
-def writeExtraSettings(dict, node, type, nimi, main_mode):
-
-    settings = []
-    hidden_outputs = []
-    script = []
-    color_ramp_data = []
-
-    # OUTPUTS
-    for output in node.outputs:
-        settings.append([-2, output.type, output.name, output.hide])    
-
-    #  SETTINGS
-    settings = node_attributes(node, settings)
-
-    # INPUTS
-    socket_number = 0
-    for Ninput in node.inputs:
-
-        if (Ninput.type == 'VALUE' or Ninput.type == 'BOOLEAN' or Ninput.type == 'STRING' or Ninput.type == 'INT'):
-            settings.append([1, socket_number, Ninput.default_value, Ninput.hide])
-
-        elif Ninput.type == 'RGBA':
-            settings.append([1, Ninput.name,
-                        [Ninput.default_value[0],
-                        Ninput.default_value[1],
-                        Ninput.default_value[2],
-                        Ninput.default_value[3]], Ninput.hide])
-
-        elif Ninput.type == 'VECTOR':
-            settings.append([1, socket_number,
-                    [Ninput.default_value[0],
-                    Ninput.default_value[1],
-                    Ninput.default_value[2]], Ninput.hide])
-
-        elif Ninput.type == 'SHADER':
-            settings.append([5, Ninput.name, Ninput.type, Ninput.hide])
-
-        elif Ninput.type == 'OBJECT' and Ninput.default_value != None:
-            settings.append([3, socket_number, Ninput.default_value.name, Ninput.hide])
-
-        elif Ninput.type == 'COLLECTION' and Ninput.default_value != None:
-            settings.append([13, socket_number, Ninput.default_value.name, Ninput.hide])
-
-        socket_number += 1
-
-
-    if(len(node.outputs) > 0):
-        for output in node.outputs:
-            if output.hide == True:
-                hidden_outputs.append([output.name])
-
-    if main_mode == 'SUB_TREE':
-
-        dict['node'].append({
-            'node': node.bl_idname,
-            'name': node.name,
-            'label': node.label,
-            'location': [node.location[0], node.location[1]],
-            'hide': node.hide,
-            'main_socket_type': type,
-            'parent': nimi,
-            'hidden_outputs': hidden_outputs,
-            'height': node.height,
-            'width': node.width,
-            'extra_settings': settings
-        })
-
-    elif main_mode == 'MAIN_TREE':
-
-        dict['nodes'].append({
-            'node': node.bl_idname,
-            'name': node.name,
-            'label': node.label,
-            'location': [node.location[0], node.location[1]],
-            'hide': node.hide,
-            'main_socket_type': "",
-            'parent': nimi,
-            'hidden_outputs': hidden_outputs,
-            'height': node.height,
-            'width': node.width,
-            'extra_settings': settings
-        })
-    
-
-
-    return dict
-
-def node_attributes(node, settings):
+def node_specific_attributes(node, settings):
 
     # ATTRIBUTE
+
+    if node.type == 'ATTRIBUTE_STATISTIC':
+        settings.append([settingType.PARAM, 'data_type', node.data_type])
+        settings.append([settingType.PARAM, 'domain', node.domain])
     
-    if node.type == 'ATTRIBUTE_COLOR_RAMP':
+    elif node.type == 'ATTRIBUTE_DOMAIN_SIZE':
+        settings.append([settingType.PARAM, 'component', node.component])
+
+    elif node.type == 'BLUR_ATTRIBUTE':
+        settings.append([settingType.PARAM, 'data_type', node.data_type])
+
+    elif node.type == 'CAPTURE_ATTRIBUTE':
+        settings.append([settingType.PARAM, 'data_type', node.data_type])
+        settings.append([settingType.PARAM, 'domain', node.domain])
+
+    elif node.type == 'STORE_NAMED_ATTRIBUTE':
+        settings.append([settingType.PARAM, 'data_type', node.data_type])
+        settings.append([settingType.PARAM, 'domain', node.domain])
+
+    # INPUT / CONSTANT
+
+    elif node.type == 'INPUT_BOOL':
+        settings.append([settingType.PARAM, 'boolean', node.boolean])
+
+    elif node.type == 'INPUT_COLOR':
+        array = numpy.array(node.color).tolist()
+        settings.append([settingType.PARAM, 'color', array])
+
+    elif node.type == 'INPUT_INT':
+        settings.append([settingType.PARAM, 'integer', node.integer])
+
+    elif node.type == 'INPUT_VECTOR':
+        array = numpy.array(node.vector).tolist()
+        settings.append([settingType.PARAM, 'vector', array])
+
+    elif node.type == 'INPUT_MATERIAL':
+        settings.append([settingType.SELECT_MATERIAL, node.material.name])
+
+    elif node.type == 'INPUT_STRING':
+        settings.append([settingType.PARAM, 'string', node.string])
+
+
+    # INPUT / GROUP
+
+    elif node.type == 'COLLECTION_INFO':
+        settings.append([settingType.PARAM, 'transform_space', node.transform_space])
+
+    elif node.type == 'OBJECT_INFO':
+        settings.append([settingType.PARAM, 'transform_space', node.transform_space])
+
+    # INPUT / SCENE
+
+
+    # OUTPUT
+
+    elif node.type == 'VIEWER':
+        settings.append([settingType.PARAM, 'domain', node.domain])
+
+    # GEOMETRY / SAMPLE
+
+    elif node.type == 'PROXIMITY':
+        settings.append([settingType.PARAM, 'target_element', node.target_element])
+
+    elif node.type == 'RAYCAST':
+        settings.append([settingType.PARAM, 'data_type', node.data_type])
+        settings.append([settingType.PARAM, 'mapping', node.mapping])
+
+    elif node.type == 'SAMPLE_INDEX':
+        settings.append([settingType.PARAM, 'data_type', node.data_type])
+        settings.append([settingType.PARAM, 'domain', node.domain])
+        settings.append([settingType.PARAM, 'clamp', node.clamp])
+
+    elif node.type == 'SAMPLE_INDEX':
+        settings.append([settingType.PARAM, 'domain', node.domain])
+
+    # GEOMETRY / OPERATIONS
+
+    elif node.type == 'DELETE_GEOMETRY':
+        settings.append([settingType.PARAM, 'domain', node.domain])
+        settings.append([settingType.PARAM, 'mode', node.mode])
+
+    elif node.type == 'DUPLICATE_ELEMENTS':
+        settings.append([settingType.PARAM, 'domain', node.domain])
+
+    elif node.type == 'MERGE_BY_DISTANCE':
+        settings.append([settingType.PARAM, 'mode', node.mode])
+
+    elif node.type == 'SEPARATE_GEOMETRY':
+        settings.append([settingType.PARAM, 'domain', node.domain])
+
+    # CURVE / READ
+
+    elif node.type == 'CURVE_HANDLE_TYPE_SELECTION':
+        settings.append([settingType.PARAM, 'handle_type', node.handle_type])
+        settings.append([settingType.MULTI_OPTION, 'mode', list(node.mode)])
+
+
+    # CURVE / SAMPLE
+
+    elif node.type == 'SAMPLE_CURVE':
+        settings.append([settingType.PARAM, 'data_type', node.data_type])
+        settings.append([settingType.PARAM, 'mode', node.mode])
+        settings.append([settingType.PARAM, 'use_all_curves', node.use_all_curves])
+
+
+    # CURVE / WRITE
+
+    elif node.type == 'SET_CURVE_NORMAL':
+        settings.append([settingType.PARAM, 'mode', node.mode])
+
+    elif node.type == 'SET_CURVE_HANDLES':
+        settings.append([settingType.PARAM, 'mode', node.mode])
+
+    elif node.type == 'CURVE_SET_HANDLES':
+        settings.append([settingType.PARAM, 'handle_type', node.handle_type])
+        settings.append([settingType.MULTI_OPTION, 'mode', list(node.mode)])
+
+    elif node.type == 'CURVE_SPLINE_TYPE':
+        settings.append([settingType.PARAM, 'spline_type', node.spline_type])
+
+    # CURVE / OPERATIONS
+
+    elif node.type == 'CURVE_TO_POINTS':
+        settings.append([settingType.PARAM, 'mode', node.mode])
+
+    elif node.type == 'FILL_CURVE':
+        settings.append([settingType.PARAM, 'mode', node.mode])
+
+    elif node.type == 'FILLET_CURVE':
+        settings.append([settingType.PARAM, 'mode', node.mode])
+
+    elif node.type == 'RESAMPLE_CURVE':
+        settings.append([settingType.PARAM, 'mode', node.mode])
+
+    elif node.type == 'TRIM_CURVE':
+        settings.append([settingType.PARAM, 'mode', node.mode])
+
+    # CURVE / PRIMITIVES
+
+    elif node.type == 'CURVE_PRIMITIVE_ARC':
+        settings.append([settingType.PARAM, 'mode', node.mode])
+
+    elif node.type == 'CURVE_PRIMITIVE_BEZIER_SEGMENT':
+        settings.append([settingType.PARAM, 'mode', node.mode])
+
+    elif node.type == 'CURVE_PRIMITIVE_CIRCLE':
+        settings.append([settingType.PARAM, 'mode', node.mode])
+
+    elif node.type == 'CURVE_PRIMITIVE_LINE':
+        settings.append([settingType.PARAM, 'mode', node.mode])
+
+    elif node.type == 'CURVE_PRIMITIVE_QUADRILATERAL':
+        settings.append([settingType.PARAM, 'mode', node.mode])
+
+    # CURVE / TOPOLOGY
+
+    # UTILITIES / COLOR
+
+    # UTILITIES / TEXT
+
+    elif node.type == 'STRING_TO_CURVES':
+        settings.append([settingType.PARAM, 'overflow', node.overflow])
+        settings.append([settingType.PARAM, 'align_x', node.align_x])
+        settings.append([settingType.PARAM, 'align_y', node.align_y])
+        settings.append([settingType.PARAM, 'pivot_mode', node.pivot_mode])
+        settings.append([settingType.SELECT_FONT, node.font.name])
+
+
+    # UTILITIES / VECTOR
+
+    elif node.type == 'CURVE_VEC':
+
+        curve_0 = []
+        curve_1 = []
+        curve_2 = []
+
+        for point in node.mapping.curves[0].points:
+            curve_0.append([point.location[0], point.location[1], point.handle_type])
+
+        for point in node.mapping.curves[1].points:
+            curve_1.append([point.location[0], point.location[1], point.handle_type])
+
+        for point in node.mapping.curves[2].points:
+            curve_2.append([point.location[0], point.location[1], point.handle_type])
+
+
+        settings.append([settingType.CURVE, 0, curve_0])
+        settings.append([settingType.CURVE, 1, curve_1])
+        settings.append([settingType.CURVE, 2, curve_2])
+
+    elif node.type == 'VECT_MATH':
+        settings.append([settingType.PARAM, 'operation', node.operation])
+
+    elif node.type == 'VECTOR_ROTATE':
+        settings.append([settingType.PARAM, 'rotation_type', node.rotation_type])
+        settings.append([settingType.PARAM, 'invert', node.invert])
+
+    elif node.type == 'MIX':
+        settings.append([settingType.PARAM, 'data_type', node.data_type])
+        settings.append([settingType.PARAM, 'clamp_factor', node.clamp_factor])
+        settings.append([settingType.PARAM, 'clamp_result', node.clamp_result])
+        settings.append([settingType.PARAM, 'factor_mode', node.factor_mode])
+        settings.append([settingType.PARAM, 'blend_type', node.blend_type])
+
+    # UTILITIES / FIELD
+
+    elif node.type == 'ACCUMULATE_FIELD':
+        settings.append([settingType.PARAM, 'data_type', node.data_type])
+        settings.append([settingType.PARAM, 'domain', node.domain])
+
+    elif node.type == 'FIELD_AT_INDEX':
+        settings.append([settingType.PARAM, 'data_type', node.data_type])
+        settings.append([settingType.PARAM, 'domain', node.domain])
+
+    elif node.type == 'FIELD_ON_DOMAIN':
+        settings.append([settingType.PARAM, 'data_type', node.data_type])
+        settings.append([settingType.PARAM, 'domain', node.domain])
+
+    # UTILITIES / MATH
+
+    elif node.type == 'BOOLEAN_MATH':
+        settings.append([settingType.PARAM, 'operation', node.operation])
+
+    elif node.type == 'CLAMP':
+        settings.append([settingType.PARAM, 'clamp_type', node.clamp_type])
+    
+    elif node.type == 'COMPARE':
+        settings.append([settingType.PARAM, 'data_type', node.data_type])
+        settings.append([settingType.PARAM, 'operation', node.operation])
+
+    elif node.type == 'CURVE_FLOAT':
+        curve_0 = []
+
+        for point in node.mapping.curves[0].points:
+            curve_0.append([point.location[0], point.location[1], point.handle_type])
+
+        settings.append([settingType.CURVE, 0, curve_0])   
+
+    elif node.type == 'FLOAT_TO_INT':
+        settings.append([settingType.PARAM, 'rounding_mode', node.rounding_mode])
+
+    elif node.type == 'ACCUMULATE_FIELD':
+        settings.append([settingType.PARAM, 'data_type', node.data_type])
+        settings.append([settingType.PARAM, 'interpolation_type', node.interpolation_type])
+        settings.append([settingType.PARAM, 'clamp', node.clamp])
+
+    elif node.type == 'MATH':
+        settings.append([settingType.PARAM, 'operation', node.operation])
+        settings.append([settingType.PARAM, 'use_clamp', node.use_clamp])
+
+
+    # UTILITIES / ROTATION
+
+    elif (node.type == 'ALIGN_EULER_TO_VECTOR'):
+        settings.append([settingType.PARAM, 'axis', node.axis])
+        settings.append([settingType.PARAM, 'pivot_axis', node.pivot_axis])
+
+    elif (node.type == 'EULER'):
+        settings.append([settingType.PARAM, 'space', node.space])
+        settings.append([settingType.PARAM, 'type', node.type])
+
+    elif (node.type == 'RANDOM_VALUE'):
+        settings.append([settingType.PARAM, 'data_type', node.data_type])
+
+    elif (node.type == 'SWITCH'):
+        settings.append([settingType.PARAM, 'input_type', node.input_type])
+
+#######
+    
+    elif node.type == 'ATTRIBUTE_COLOR_RAMP':
 
         settings.append([7, 'color_mode', node.color_ramp.color_mode])
         settings.append([7, 'interpolation', node.color_ramp.interpolation])
@@ -163,41 +334,41 @@ def node_attributes(node, settings):
 
     elif node.type == 'ATTRIBUTE_COMBINE_XYZ':
 
-        settings.append([0, 'input_type_x', node.input_type_x])
-        settings.append([0, 'input_type_y', node.input_type_y])
-        settings.append([0, 'input_type_z', node.input_type_z])
+        settings.append([settingType.PARAM, 'input_type_x', node.input_type_x])
+        settings.append([settingType.PARAM, 'input_type_y', node.input_type_y])
+        settings.append([settingType.PARAM, 'input_type_z', node.input_type_z])
 
     elif node.type == 'ATTRIBUTE_COMPARE':
 
-        settings.append([0, 'operation', node.operation])
-        settings.append([0, 'input_type_a', node.input_type_a])
-        settings.append([0, 'input_type_b', node.input_type_b])
+        settings.append([settingType.PARAM, 'operation', node.operation])
+        settings.append([settingType.PARAM, 'input_type_a', node.input_type_a])
+        settings.append([settingType.PARAM, 'input_type_b', node.input_type_b])
 
     elif node.type == 'ATTRIBUTE_FILL':
 
-        settings.append([0, 'data_type', node.data_type])
+        settings.append([settingType.PARAM, 'data_type', node.data_type])
 
     elif node.type == 'ATTRIBUTE_MATH':
 
-        settings.append([0, 'operation', node.operation])
-        settings.append([0, 'input_type_a', node.input_type_a])
-        settings.append([0, 'input_type_b', node.input_type_b])
+        settings.append([settingType.PARAM, 'operation', node.operation])
+        settings.append([settingType.PARAM, 'input_type_a', node.input_type_a])
+        settings.append([settingType.PARAM, 'input_type_b', node.input_type_b])
 
     elif node.type == 'ATTRIBUTE_MIX':
 
-        settings.append([0, 'blend_type', node.blend_type])
-        settings.append([0, 'input_type_factor', node.input_type_factor])
-        settings.append([0, 'input_type_a', node.input_type_a])
-        settings.append([0, 'input_type_b', node.input_type_b])
+        settings.append([settingType.PARAM, 'blend_type', node.blend_type])
+        settings.append([settingType.PARAM, 'input_type_factor', node.input_type_factor])
+        settings.append([settingType.PARAM, 'input_type_a', node.input_type_a])
+        settings.append([settingType.PARAM, 'input_type_b', node.input_type_b])
 
     elif node.type == 'ATTRIBUTE_PROXIMITY':
 
-        settings.append([0, 'target_geometry_element', node.target_geometry_element])
+        settings.append([settingType.PARAM, 'target_geometry_element', node.target_geometry_element])
 
     elif node.type == 'ATTRIBUTE_RANDOMIZE':
 
-        settings.append([0, 'operation', node.operation])
-        settings.append([0, 'data_type', node.data_type])
+        settings.append([settingType.PARAM, 'operation', node.operation])
+        settings.append([settingType.PARAM, 'data_type', node.data_type])
 
     elif node.type == 'ATTRIBUTE_SAMPLE_TEXTURE':
 
@@ -206,13 +377,13 @@ def node_attributes(node, settings):
 
     elif node.type == 'ATTRIBUTE_SEPARATE_XYZ':
 
-        settings.append([0, 'input_type', node.input_type])
+        settings.append([settingType.PARAM, 'input_type', node.input_type])
 
     elif node.type == 'ATTRIBUTE_VECTOR_MATH':
 
-        settings.append([0, 'operation', node.operation])
-        settings.append([0, 'input_type_a', node.input_type_a])
-        settings.append([0, 'input_type_b', node.input_type_b])
+        settings.append([settingType.PARAM, 'operation', node.operation])
+        settings.append([settingType.PARAM, 'input_type_a', node.input_type_a])
+        settings.append([settingType.PARAM, 'input_type_b', node.input_type_b])
     
 
 
@@ -242,15 +413,15 @@ def node_attributes(node, settings):
 
     elif node.type == 'COLLECTION_INFO':
 
-        settings.append([0, 'transform_space', node.transform_space])
+        settings.append([settingType.PARAM, 'transform_space', node.transform_space])
 
     elif node.type == 'OBJECT_INFO':
 
-        settings.append([0, 'transform_space', node.transform_space])
+        settings.append([settingType.PARAM, 'transform_space', node.transform_space])
 
     elif node.type == 'INPUT_VECTOR':
 
-            settings.append([0, 'vector',
+            settings.append([settingType.PARAM, 'vector',
             [node.vector[0],
             node.vector[1],
             node.vector[2]]])
@@ -259,12 +430,12 @@ def node_attributes(node, settings):
 
     elif node.type == 'BOOLEAN':
 
-        settings.append([0, 'operation', node.operation])
+        settings.append([settingType.PARAM, 'operation', node.operation])
 
     elif node.type == 'TRIANGULATE':
 
-        settings.append([0, 'quad_method', node.quad_method])
-        settings.append([0, 'ngon_method', node.ngon_method])
+        settings.append([settingType.PARAM, 'quad_method', node.quad_method])
+        settings.append([settingType.PARAM, 'ngon_method', node.ngon_method])
 
 
 
@@ -272,35 +443,29 @@ def node_attributes(node, settings):
 
     elif node.type == 'ALIGN_ROTATION_TO_VECTOR':
 
-        settings.append([0, 'pivot_axis', node.pivot_axis])
-        settings.append([0, 'input_type_factor', node.input_type_factor])
-        settings.append([0, 'input_type_vector', node.input_type_vector])
-        settings.append([0, 'axis', node.axis])
+        settings.append([settingType.PARAM, 'pivot_axis', node.pivot_axis])
+        settings.append([settingType.PARAM, 'input_type_factor', node.input_type_factor])
+        settings.append([settingType.PARAM, 'input_type_vector', node.input_type_vector])
+        settings.append([settingType.PARAM, 'axis', node.axis])
 
     elif node.type == 'POINT_DISTRIBUTE':
 
-        settings.append([0, 'distribute_method', node.distribute_method])
+        settings.append([settingType.PARAM, 'distribute_method', node.distribute_method])
 
     elif node.type == 'POINT_INSTANCE':
 
-        settings.append([0, 'instance_type', node.instance_type])
-        settings.append([0, 'use_whole_collection', node.use_whole_collection])
+        settings.append([settingType.PARAM, 'instance_type', node.instance_type])
+        settings.append([settingType.PARAM, 'use_whole_collection', node.use_whole_collection])
 
-    elif (node.type == 'EULER' or node.type == 'AXIS_ANGLE'):
 
-        settings.append([0, 'input_type_rotation', node.input_type_rotation])
-        settings.append([0, 'input_type_axis', node.input_type_axis])
-        settings.append([0, 'input_type_angle', node.input_type_angle])
-        settings.append([0, 'space', node.space])
-        settings.append([0, 'type', node.type])
 
     elif node.type == 'POINT_SCALE':
 
-        settings.append([0, 'input_type', node.input_type])
+        settings.append([settingType.PARAM, 'input_type', node.input_type])
 
     elif node.type == 'POINT_TRANSLATE':
 
-        settings.append([0, 'input_type', node.input_type])
+        settings.append([settingType.PARAM, 'input_type', node.input_type])
 
     
 
@@ -308,151 +473,28 @@ def node_attributes(node, settings):
 
     elif node.type == 'POINTS_TO_VOLUME':
 
-        settings.append([0, 'resolution_mode', node.resolution_mode])
+        settings.append([settingType.PARAM, 'resolution_mode', node.resolution_mode])
 
     elif node.type == 'VOLUME_TO_MESH':
 
-        settings.append([0, 'resolution_mode', node.resolution_mode])
+        settings.append([settingType.PARAM, 'resolution_mode', node.resolution_mode])
 
     # UTILIES
 
     elif node.type == 'FLOAT_COMPARE':
 
-        settings.append([0, 'operation', node.operation])
+        settings.append([settingType.PARAM, 'operation', node.operation])
 
     elif node.type == 'MAP_RANGE':
 
-        settings.append([0, 'interpolation_type', node.interpolation_type]) 
-        settings.append([0, 'clamp', node.clamp])
+        settings.append([settingType.PARAM, 'interpolation_type', node.interpolation_type]) 
+        settings.append([settingType.PARAM, 'clamp', node.clamp])
 
     elif node.type == 'BOOLEAN_MATH':
 
-        settings.append([0, 'operation', node.operation])
-    
-    else:
-        settings.append([-1,-1,-1]) #  -1 Means that it dosen't have any extra settings
+        settings.append([settingType.PARAM, 'operation', node.operation])
 
     # VECTOR
 
     return settings
 
-def readExtraSettings(extra_settings, node):
-    for setting in extra_settings:
-
-        # DOWNLIST
-
-        if setting[0] == 0: 
-            setattr(node, setting[1], setting[2])
-
-        # INPUT SOCKET: VALUE, BOOLEAN, STRING and INT
-
-        elif setting[0] == 1:
-            try:
-                node.inputs[setting[1]].default_value = setting[2]
-            except:
-                pass
-
-        elif setting[0] == 2:
-            node.outputs[setting[1]].default_value = setting[2]
-
-        # INPUT SOCKET: OBJECT
-        
-        elif setting[0] == 3:
-            try:
-                node.inputs[setting[1]].default_value = bpy.data.objects[setting[2]]
-            except:
-                pass
-       
-        # Image loading for image texture node
-
-        elif setting[0] == 4:
-            if(setting[2] != '' and node.image == None):
-
-                use_this_path = ''
-                for image in bpy.data.images:
-                    if(image.filepath == setting[2]):
-                        use_this_path = image
-                        break
-                if(use_this_path == ''):
-                    if(os.path.isfile(setting[2])):
-                        node.image = bpy.data.images.load(setting[2])
-                else:
-                    node.image = use_this_path
-
-        # INPUT SOCKET: COLLECTION
-        
-        elif setting[0] == 13:
-            try:
-                node.inputs[setting[1]].default_value = bpy.data.collections[setting[2]]
-            except:
-                pass
-
-
-        elif setting[0] == 14:
-            if(setting[2] != ''):
-                for image in bpy.data.images:
-                    if image.name == setting[2]:
-                        node.image = image
-        # COLOR RAMP
-
-
-        elif setting[0] == 7:
-            setattr(node.color_ramp, setting[1], setting[2])
-
-        elif setting[0] == 8:
-            data = setting[2]
-            if(len(data) > 2):
-                while(len(node.color_ramp.elements) < len(data)):
-                    node.color_ramp.elements.new(0)
-
-            for index, element in enumerate(setting[2]):
-                node.color_ramp.elements[index].position = element[0]
-                node.color_ramp.elements[index].color = element[1]
-
-        # CURVE NODE
-
-        elif setting[0] == 9:
-            data = setting[2]
-            curve = node.mapping.curves[setting[1]]
-
-            if (len(data) > 2):
-                while (len(curve.points) < len(data)):
-                    curve.points.new(0, 0)
-            elif (len(data) < 2):
-                while (len(curve.points) > len(data)):
-                    curve.points.remove(curve.points[0])
-
-            for index, loc in enumerate(setting[2]):
-                curve.points[index].location = (loc[0], loc[1])
-                curve.points[index].handle_type = loc[2]
-
-        # Image1 ja Image2 kasittely taalla // 10
-
-        elif setting[0] == 10:
-            print(setting)
-            node.inputs[setting[1]].default_value = setting[2]
-
-        # Group Node
-
-        elif setting[0] == 11:
-            node.inputs[setting[1]].default_value = setting[2]
-            node.node_tree.inputs[setting[1]].min_value = setting[3]
-            node.node_tree.inputs[setting[1]].max_value = setting[4]
-
-        elif setting[0] == 12:
-            if node.image != None:
-                node.image.colorspace_settings.name = setting[2]
-
-        elif setting[0] == 'script':
-            textFile = bpy.data.texts.new(setting[1])
-
-            for line in setting[2]:
-                textFile.write(line + '\n')
-
-            node.script = textFile
-
-        elif setting[0] == 15:
-            try:
-                node.texture = bpy.data.textures[setting[1]]
-            except:
-                pass

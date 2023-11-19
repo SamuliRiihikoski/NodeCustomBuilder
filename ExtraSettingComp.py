@@ -22,12 +22,9 @@ import os
 from . import NodeGroupComputer
 
 
-def writeExtraSettings(dict, node, type, nimi, main_mode):
+def node_specific_attributes(node, settings):
 
-    settings = []
     #  INPUT
-
-
     if node.type == 'BOKEHIMAGE':
 
         settings.append([0, 'flaps', node.flaps])
@@ -68,7 +65,6 @@ def writeExtraSettings(dict, node, type, nimi, main_mode):
 
     elif node.type == 'RGB':
 
-        #settings.append([-1, -1, -1])
         settings.append([2, 'RGBA', [node.outputs['RGBA'].default_value[0],
                                      node.outputs['RGBA'].default_value[1],
                                      node.outputs['RGBA'].default_value[2],
@@ -86,7 +82,7 @@ def writeExtraSettings(dict, node, type, nimi, main_mode):
 
         settings.append([-1, -1, -1])
 
-    elif node.type == 'VALUE':
+    elif node.type == 'INPUT':
 
         settings.append([2, 'Value', node.outputs['Value'].default_value])
 
@@ -751,7 +747,7 @@ def writeExtraSettings(dict, node, type, nimi, main_mode):
         settings.append([1, 'To Min', node.inputs['To Min'].default_value])
         settings.append([1, 'To Max', node.inputs['To Max'].default_value])
 
-    elif node.type == 'MAP_VALUE':
+    elif node.type == 'MAP_INPUT':
 
         settings.append([0, 'offset', node.offset[0]])
         settings.append([0, 'size', node.size[0]])
@@ -1189,42 +1185,10 @@ def writeExtraSettings(dict, node, type, nimi, main_mode):
                           node.inputs['Image'].default_value[1],
                           node.inputs['Image'].default_value[2],
                           node.inputs['Image'].default_value[3]]])
+     
+    return settings
 
-    else:
-        settings.append([-1,-1,-1]) #  -1 Means that it dosen't have any extra settings
-
-
-    if main_mode == 'SUB_TREE':
-
-        dict['node'].append({
-            'node': node.bl_idname,
-            'name': node.name,
-            'location': [node.location[0], node.location[1]],
-            'hide': node.hide,
-            'main_socket_type': type,
-            'parent': nimi,
-            'height': node.height,
-            'width': node.width,
-            'extra_settings': settings
-        })
-
-    elif main_mode == 'MAIN_TREE':
-
-        dict['nodes'].append({
-            'node': node.bl_idname,
-            'name': node.name,
-            'location': [node.location[0], node.location[1]],
-            'hide': node.hide,
-            'main_socket_type': "",
-            'parent': nimi,
-            'height': node.height,
-            'width': node.width,
-            'extra_settings': settings
-        })
-
-    return dict
-
-def readExtraSettings(extra_settings, node):
+def readExtraSttings(extra_settings, node):
     for setting in extra_settings:
         if setting[0] == 0:
             setattr(node, setting[1], setting[2])

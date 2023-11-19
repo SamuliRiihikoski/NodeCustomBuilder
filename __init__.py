@@ -795,9 +795,8 @@ class OFPropConfirmOperator(bpy.types.Operator):
             dict, dict_groups = write_json.write(dict, nodes)
 
             total_dict = {**dict, **dict_groups}
-
             library_dir = get_library_path() 
-            print('osoite: ', library_dir)
+
             if (not (os.path.isdir(library_dir))):
                 os.makedirs(library_dir)
 
@@ -835,7 +834,7 @@ class OFPropConfirmOperator(bpy.types.Operator):
                         self.type = ("%s%.2d" % (self.type, name_index))
                 else:
                     looking = False
-            print('total_dict', total_dict)
+
             with open(file, 'w') as outfile:
                 json.dump(total_dict, outfile, indent='    ')
 
@@ -954,7 +953,6 @@ class RenameConfirmOperator(bpy.types.Operator):
 
     def execute(self, context):
 
-        print('CustomFolder1: ', bpy.context.scene.custom_folders)
         current_folder = bpy.context.scene.custom_folders
 
         if (bpy.context.area.ui_type == 'CompositorNodeTree'):
@@ -1059,7 +1057,6 @@ class RenameConfirmOperator(bpy.types.Operator):
             if(os.path.isfile(file)):
                 os.replace(file, new)
                 delete_folder = True
-                print('CustomFolder2: ', bpy.context.scene.custom_folders)
                 if(item_count == 1):
                     with open(folder_file, "r+") as f:
                         d = f.readlines()

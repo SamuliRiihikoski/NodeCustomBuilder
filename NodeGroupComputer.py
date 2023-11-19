@@ -19,198 +19,134 @@
 
 import bpy
 from . import ExtraSetting
-from . import ExtraSettingComp
-from . import ExtraSettingGeo
 
-def find_all_groupnodes(base_group_nodes):
+def collectGroupTree(current_group, final_groups_list, groups):
 
-    result_groups = []
-
-    for base_node in base_group_nodes:
-
-        if base_node not in result_groups:
-            result_groups.append(base_node)
-
-        index_groups = []
-        new_index_group = []
-        index_groups.append(base_node)
-
-        while index_groups != []:
-            for base_sub_group in index_groups:
-                for node in base_sub_group.nodes:
-                    if node.type == 'GROUP':
-                        if node.node_tree != None:
-                            if node.node_tree not in new_index_group:
-                                new_index_group.append(node.node_tree)
-                                result_groups.append(node.node_tree)
-
-            index_groups = new_index_group
-            new_index_group = []
-
-    return result_groups
-
-def write_groupnodetrees(allgroups):
-
-    dict_groups = {}
-    dict_groups['groups'] = []
     nodes = {}
     nodes['node'] = []
     links = {}
     links['links'] = []
     inputs = {}
     outputs = {}
-    new_groups = []
-    all_groups_here = []
+    settings = []
 
+    if current_group in groups:
+        return
 
-    while allgroups != []:
-        for group in allgroups:
-            if group != None:
-                if (group.name.startswith('__node__') == False):
-                    group.name = '__node__' + group.name
+    for node in bpy.data.node_groups[current_group].nodes:
 
-                if group.name not in all_groups_here:
-                    all_groups_here.append(group.name)
-                    for node in group.nodes:
+        if (node.parent != None):
+            parent = node.parent.name
+        else:
+            parent = ''
 
+        nodes['node'].append({
+            'node': node.bl_idname,
+            'name': node.name,
+            'label': node.label,
+            'location': [node.location[0], node.location[1]],
+            'parent': parent,
+            'hide': node.hide,
+            'height': node.height,
+            'width': node.width,
+        })
 
+        if(node.type == 'GROUP'):
+            if (node.node_tree == None):
+                continue
 
-                        if (node.parent != None):
-                            parent = node.parent.name
-                        else:
-                            parent = ''
+            name_node_tree = node.node_tree.name
 
-                        if(node.type == 'GROUP'):
-                            if (node.node_tree != None):
-                                name_node_tree = node.node_tree.name
-                            else:
-                                name_node_tree = ''
+            if(name_node_tree.startswith('__node__') == False):
+                name_node_tree = '__node__' + name_node_tree
 
-                            if(name_node_tree.startswith('__node__') == False):
-                                name_node_tree = '__node__' + name_node_tree
+            area = bpy.context.area.ui_type
+            settings = ExtraSetting.writeExtraSettings(area, node)
 
-                            group_settings = ExtraSetting.writeGroupExtraSettings(node)
-                            nodes['node'].append({
-                                'node': node.bl_idname,
-                                'name': node.name,
-                                'label': node.label,
-                                'node_tree': name_node_tree,
-                                'location': [node.location[0], node.location[1]],
-                                'parent': parent,
-                                'hide': node.hide,
-                                'hidden_outputs': [],
-                                'height': node.height,
-                                'width': node.width,
-                                'extra_settings': group_settings
-                            })
-                            new_groups.append(node.node_tree)
-                        elif(node.type == 'GROUP_INPUT'):
+            nodes['node'][-1].update({
+                'node_tree': name_node_tree,
+                'extra_settings': settings
+            })
 
-                            outputs['outputs'] = []
+            groups.append(node.node_tree)
+            new_group, groups = collectGroupTree(node.node_tree.name, final_groups_list, groups)
+            final_groups_list['groups'].append(new_group)
 
-                            for input in node.outputs:
-                                if(input.name != ''):
-                                    outputs['outputs'].append([input.bl_idname, input.name])
+        elif(node.type == 'GROUP_INPUT'):
 
-                            nodes['node'].append({
-                                'node': node.bl_idname,
-                                'name': node.name,
-                                'label': node.label,
-                                'outputs': outputs['outputs'],
-                                'location': [node.location[0], node.location[1]],
-                                'parent': parent,
-                                'hide': node.hide,
-                                'hidden_outputs': [],
-                                'height': node.height,
-                                'width': node.width,
-                                'extra_settings': [-1, -1, -1]
-                            })
+            outputs['outputs'] = []
 
-                        elif(node.type == 'GROUP_OUTPUT'):
+            for input in node.outputs:
+                if(input.name != ''):
+                    outputs['outputs'].append([input.bl_idname, input.name])
 
-                            inputs['inputs'] = []
+            nodes['node'][-1].update({
+                'outputs': outputs['outputs'],
+                'extra_settings': []
+            })
 
-                            for input in node.inputs:
-                                if(input.name != ''):
-                                    inputs['inputs'].append([input.bl_idname, input.name])
+        elif(node.type == 'GROUP_OUTPUT'):
 
-                            nodes['node'].append({
-                                'node': node.bl_idname,
-                                'name': node.name,
-                                'label': node.label,
-                                'inputs': inputs['inputs'],
-                                'location': [node.location[0], node.location[1]],
-                                'hide': node.hide,
-                                'parent': parent,
-                                'hide': node.hide,
-                                'hidden_outputs': [],
-                                'height': node.height,
-                                'width': node.width,
-                                'extra_settings': [-1, -1, -1]
-                            })
+            inputs['inputs'] = []
 
-                        elif (node.type == 'FRAME'):
+            for input in node.inputs:
+                if(input.name != ''):
+                    inputs['inputs'].append([input.bl_idname, input.name])
 
-                            if (node.name.startswith('__node__') == False):
-                                node.name = '__node__' + node.name
+            nodes['node'][-1].update({
+        
+                'inputs': inputs['inputs'],
+                'location': [node.location[0], node.location[1]],
+        
+                'extra_settings': []
+            })
 
-                            nodes['node'].append({
-                                'node': node.bl_idname,
-                                'name': node.name,
-                                'label': node.label,
-                                'color': [node.color[0], node.color[1], node.color[2]],
-                                'hide': node.hide,
-                                'height': node.height,
-                                'width': node.width,
-                                'use_color': node.use_custom_color,
-                                'location': [node.location[0], node.location[1]],
-                                'parent': parent,
-                                'hide': node.hide,
-                                'hidden_outputs': [],
-                                'extra_settings': [-1, -1, -1]
-                            })
+        elif (node.type == 'FRAME'):
 
-                        else:
+            if (node.name.startswith('__node__') == False):
+                node.name = '__node__' + node.name
 
-                            if node.parent != None:
-                                nimi = node.parent.name
-                            else:
-                                nimi = ''
+            nodes['node'][-1].update({
+                'name': node.name,
+                'color': [node.color[0], node.color[1], node.color[2]],
+                'use_color': node.use_custom_color,
+                'extra_settings': []
+            })
 
-                            if (bpy.context.area.ui_type == 'CompositorNodeTree'):
-                                nodes = ExtraSettingComp.writeExtraSettings(nodes, node, '', nimi, 'SUB_TREE')
-                            elif (bpy.context.area.ui_type == 'GeometryNodeTree'):
-                                nodes = ExtraSettingGeo.writeExtraSettings(nodes, node, '', nimi, 'SUB_TREE')
-                            else:
-                                nodes = ExtraSetting.writeExtraSettings(nodes, node, '', nimi, 'SUB_TREE')
+        else:
 
-                        if (len(node.inputs) > 0):
-                            for index, input in enumerate(node.inputs):
-                                if(input.is_linked):
+            if node.parent != None:
+                nimi = node.parent.name
+            else:
+                nimi = ''
+            area = bpy.context.area.ui_type
+            settings = ExtraSetting.writeExtraSettings(area, node)
 
-                                    nimi = input.links[0].from_node.name
-                                    from_socket_index = input.links[0].from_socket.path_from_id()
-                                    from_socket_index = from_socket_index.split(']')[-2].lstrip('.outputs[')
+            nodes['node'][-1].update({
+                'extra_settings': settings
+            })
 
-                                    links['links'].append([nimi, input.links[0].from_socket.name, node.name, index, int(from_socket_index)])
+        # Write connections
 
+        if(len(node.inputs) == 0):
+            continue
 
-                dict_groups['groups'].append ({
-                    'name': group.name,
-                    'nodes': nodes['node'],
-                    'links': links['links']
-                })
+        for index, input in enumerate(node.inputs):
+            if(input.is_linked):
 
-                nodes['node'] = []
-                links['links'] = []
+                temp_socket = str(input.links[0].from_socket.path_from_id()).split('outputs[')[-1]
+                temp_socket = temp_socket.split(']')[0]
 
+                links['links'].append([
+                        input.links[0].from_node.name,
+                        int(temp_socket),
+                        node.name,
+                        index,
+                    ])
 
-
-
-        allgroups = new_groups
-        new_groups = []
-
-
-
-    return dict_groups
+    return {
+        'name': '__node__' + current_group,
+        'nodes': nodes['node'],
+        'links': links['links']
+    }, groups
 
